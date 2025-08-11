@@ -31,10 +31,10 @@ class FileManager:
         """
 
         if command[0] == ShellCommands.UPLOAD_FILE.value:
-            return self.upload_file(command[1:])
+            return self.upload_file(command[1])
 
         elif command[0] == ShellCommands.DOWNLOAD_FILE.value:
-            return self.download_file(command[1:])
+            return self.download_file(command[1])
 
         else:
             return "Invalid command for file manager. Provided command: '{}'".format(" ".join(command))

