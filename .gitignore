@@ -1,0 +1,9 @@
+build/
+__pycache__
+*.spec
+.env
+bin/
+lib/
+lib64
+pyvenv.cfg
+received_data.log
