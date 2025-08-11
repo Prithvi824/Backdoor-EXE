@@ -19,6 +19,51 @@ PHOTOGRAPHER = PhotoGrapher()
 UI_MANAGER = UIManager()
 FILE_MANAGER = FileManager()
 
+def run_command(args: List[str], timeout: int = 15) -> str:
+    """
+    Run a command with timeout and return output.
+
+    Args:
+        args (List[str]): The list of commands to run.
+        timeout (int, optional): The timeout in seconds. Defaults to 15.
+
+    Returns:
+        str: The output of the command.
+    """
+
+    # run the command
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    # get the output
+    output = []
+    start_time = time.time()
+
+    while True:
+        # check if timeout exceeded
+        if time.time() - start_time > timeout:
+            proc.kill()
+            raise TimeoutError(f"Command timed out after {timeout} seconds")
+
+        # read line if available (non-blocking read)
+        line = proc.stdout.readline()
+        if line:
+            output.append(line)
+        elif proc.poll() is not None:
+            # process finished and no more output
+            break
+        else:
+            # no output yet, small sleep to avoid busy wait
+            time.sleep(0.1)
+
+    # return the output
+    return ''.join(output)
+
 
 def handle_custom_command(command: List[str]) -> str:
     """
@@ -114,9 +159,7 @@ def run_main_loop(attempts: int = 10):
 
                     # perform the general command
                     else:
-                        cmd_output = subprocess.check_output(
-                            command, shell=True, stderr=subprocess.STDOUT
-                        ).decode()
+                        cmd_output = run_command(args)
 
                 # handle cmd errors
                 except subprocess.CalledProcessError as e:
