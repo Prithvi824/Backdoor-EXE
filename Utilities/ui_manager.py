@@ -40,6 +40,7 @@ CLOSE_SCRIPT = """
 Get-Process | Where-Object {{ $_.MainWindowTitle -eq '{}' }} | Stop-Process
 """
 
+
 class CursorPoint(ctypes.Structure):
     """
     The CursorPoint structure contains information about the cursor position.
@@ -321,8 +322,8 @@ class UIManager:
 
                 # if the key does not exists break
                 if not vk:
-                    return (
-                        "Failed to type sentence: Key not found for character: {}".format(char)
+                    return "Failed to type sentence: Key not found for character: {}".format(
+                        char
                     )
 
                 # type the key
@@ -640,7 +641,14 @@ class UIManager:
         """
 
         # command used
-        cmd = ["powershell", "-NoProfile", "-Command", FOCUS_SCRIPT.format(tab_name)]
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            FOCUS_SCRIPT.format(tab_name),
+        ]
 
         # focus on the tab
         try:
@@ -662,7 +670,15 @@ class UIManager:
 
         # close the tab
         try:
-            subprocess.call(["powershell", "-NoProfile", "-Command", CLOSE_SCRIPT.format(tab_name)], text=True)
+            cmd = [
+                "powershell",
+                "-NoProfile",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                CLOSE_SCRIPT.format(tab_name),
+            ]
+            subprocess.call(cmd)
             return "Closed tab: {}".format(tab_name)
         except Exception as e:
             return "Failed to close tab: {}".format(e)
@@ -676,15 +692,26 @@ class UIManager:
         """
 
         # get the active windows
+        # Build PowerShell command that outputs full, un-truncated window titles
         ps_command = (
             "Get-Process | "
             "Where-Object { $_.MainWindowTitle } | "
-            "Select-Object ProcessName, MainWindowTitle"
+            "Select-Object ProcessName,MainWindowTitle | "
+            "Format-Table -AutoSize -Wrap | "
+            "Out-String -Width 4096"
         )
-        command = ["powershell", "-NoProfile", "-Command", ps_command]
+        # call PowerShell invisibly so no console window flashes
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            ps_command,
+        ]
 
-        # check the output
-        res = subprocess.check_output(command, text=True)
+        # capture the output (text=True sets universal newlines & decodes)
+        res = subprocess.check_output(command, encoding="utf-8", errors="ignore")
 
         # return the output
         return res
@@ -744,7 +771,9 @@ class UIManager:
             return self.focus_on_tab(command[1])
 
         elif command[0] == ShellCommands.CLOSE_TAB.value:
-            return self.close_tab(command[1])
+            return self.close_tab(" ".join(command[1:]))
 
         else:
-            return "Invalid command for ui manager. Provided command: {}".format(command)
+            return "Invalid command for ui manager. Provided command: {}".format(
+                command
+            )
