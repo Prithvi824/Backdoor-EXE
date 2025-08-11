@@ -29,21 +29,20 @@ The server automatically wraps messages with the required `>>` `<<` markers.
 from __future__ import annotations
 
 # 1st party imports
+import os
 import sys
 import cmd
 import socket
 import argparse
-import os
 import threading
 from typing import Dict, Tuple, List
 
 # 3rd party imports
 import requests
 
-# local imports
-from config import DISCORD_WEBHOOK
 
 # check if the DISCORD_WEBHOOK is set
+DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 if not DISCORD_WEBHOOK:
     raise ValueError("DISCORD_WEBHOOK is not set. Please check the config.py file.")
 
