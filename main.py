@@ -12,6 +12,7 @@ from Utilities.ui_manager import UIManager
 from Utilities.photographer import PhotoGrapher
 from Utilities.file_manager import FileManager
 from Utilities.socket_handler import SocketHandler
+from Utilities.version_manager import VersionManager
 from commands import ShellCommands, Utils, BASE_PREFIX
 
 # create instances
@@ -142,6 +143,15 @@ def run_main_loop(attempts: int = 10):
 
 
 if __name__ == "__main__":
+
+    # create version manager instance
+    version_manager = VersionManager()
+
+    # check for updates
+    if version_manager.check_and_update():
+        version_manager.stage_new_update()
+    else:
+        version_manager.remove_local_updater()
 
     # run the script
     try:

@@ -11,9 +11,8 @@ from __future__ import annotations
 
 # 1st party imports
 import os
-import shutil
 import sys
-import tempfile
+import subprocess
 from pathlib import Path
 from typing import Tuple, Optional
 
@@ -21,61 +20,33 @@ from typing import Tuple, Optional
 import requests
 
 # local imports
-from config import RAW_VERSION_URL, EXE_ASSET_URL, EXE_NAME, VERSION_FILE, HTTP_TIMEOUT
+from config import RAW_VERSION_URL, CURRENT_VERSION, HTTP_TIMEOUT, UPDATER_EXE_URL
+
+# the file name of the updater
+UPDATER_EXE = "updater.exe"
 
 
 class VersionManager:
-    """Encapsulates all update-handling logic."""
+    """Encapsulates all version-handling logic."""
 
     def check_and_update(self) -> bool:
         """Return True if an update was downloaded and staged."""
 
         # get the local and remote version
-        local = self._read_local_version()
+        local = CURRENT_VERSION
         remote = self._fetch_remote_version()
-
-        # if remote version is not found
-        if not remote:
-            return False
 
         # if remote version is newer
         if self._is_remote_newer(remote, local):
-            self._stage_new_exe()
             return True
         return False
 
-    def _app_dir(self) -> Path:
-        """Directory containing the running exe and version.txt"""
-
-        # if the app is frozen
-        if getattr(sys, "frozen", False):
-            return Path(sys.executable).resolve().parent
-
-        # else return the path of the current file
-        return Path(__file__).resolve().parent
-
-    def _read_local_version(self) -> str:
-        """Read the local version.txt file and get the version.
-
-        Returns:
-            str: The version of the application.
-        """
-
-        # get the path
-        path = self._app_dir() / VERSION_FILE
-
-        # check if the file exists
-        if not path.exists():
-            return "0.0.0"
-
-        # return the version
-        return path.read_text(encoding="utf-8").strip()
-
     def _fetch_remote_version(self) -> Optional[str]:
-        """Fetch the remote version from the raw version url.
+        """
+        Fetch the remote version from the raw version url.
 
         Returns:
-            Optional[str]: The remote version if found, None otherwise.
+            Optional[str]: The remote version if found, CURRENT_VERSION otherwise.
         """
 
         try:
@@ -90,7 +61,7 @@ class VersionManager:
             return response.text.strip()
 
         except Exception:
-            return None
+            return CURRENT_VERSION
 
     def _version_tuple(self, v: str) -> Tuple[int, ...]:
         """Convert a version string to a tuple of integers.
@@ -126,75 +97,76 @@ class VersionManager:
         # return the comparison result
         return self._version_tuple(remote) > self._version_tuple(local)
 
-    def _download_latest_exe(self) -> Path:
-        """Download the latest executable from the remote URL.
-
-        Returns:
-            Path: The path to the downloaded executable.
+    def stage_new_update(self) -> None:
+        """
+        Download and run the updater from the github repo.
+        This function should be called when a new update is available.
         """
 
-        # download the latest executable
-        with requests.get(EXE_ASSET_URL, stream=True, timeout=HTTP_TIMEOUT) as r:
+        # download the updater executable
+        updater_path = self._download_updater()
+
+        # if the updater path is not found
+        if not updater_path:
+            return None
+
+        # run the updater in background and exit
+        # NOTE: format: updater.exe <current_exe>
+        subprocess.Popen(
+            [str(updater_path), sys.executable],
+            creationflags=subprocess.CREATE_NEW_CONSOLE,
+        )
+        sys.exit(0)
+
+    def _download_updater(self) -> Optional[Path]:
+        """
+        Download the updater from the github repo.
+
+        Returns:
+            Optional[Path]: The path to the downloaded updater.
+        """
+
+        try:
+
+            # make the request
+            response = requests.get(UPDATER_EXE_URL, timeout=HTTP_TIMEOUT)
 
             # raise an exception if the request failed
-            r.raise_for_status()
-
-            # create a temporary file
-            fd, tmp = tempfile.mkstemp(suffix=".exe")
-            os.close(fd)
+            response.raise_for_status()
 
             # save the file
-            with open(tmp, "wb") as f:
-                shutil.copyfileobj(r.raw, f)
+            with open(UPDATER_EXE, "wb") as f:
+                f.write(response.content)
+
+        except Exception:
+            return None
 
         # return the path
-        return Path(tmp)
+        return Path(UPDATER_EXE)
 
-    def _stage_new_exe(self) -> None:
-        """Stage the new executable for replacement."""
+    def _app_dir(self) -> Path:
+        """
+        This function returns the directory containing the running exe.
 
-        # download the latest executable
-        new_exe_tmp = self._download_latest_exe()
+        Returns:
+            Path: The directory containing the running exe.
+        """
 
-        # get the target path
-        target = self._app_dir() / EXE_NAME
+        # if the app is frozen
+        if getattr(sys, "frozen", False):
+            return Path(sys.executable).resolve().parent
 
-        # get the staged path
-        staged = target.with_suffix(".new")
+        # else return the path of the current file
+        return Path(__file__).resolve().parent
 
-        # stage the new executable
-        try:
-            new_exe_tmp.replace(staged)
-        finally:
-
-            # remove the temporary file
-            if new_exe_tmp.exists():
-                new_exe_tmp.unlink(missing_ok=True)
-
-    @staticmethod
-    def apply_staged_update() -> None:
-        """Call early in program start to swap .new file into place, if present.
-        This function should be called early in program start to swap .new file into place, if present.
+    def remove_local_updater(self) -> None:
+        """
+        This function check if a updater.exe exists and remove it.
         """
 
         # get the path
-        exe_path = Path(sys.executable).resolve()
+        updater_path = self._app_dir() / UPDATER_EXE
 
-        # get the staged path
-        staged = exe_path.with_suffix(".new")
-
-        # if the staged file exists
-        if staged.exists():
-
-            # create a backup
-            backup = exe_path.with_suffix(".bak")
-            try:
-
-                # replace the executable
-                exe_path.replace(backup)
-                staged.replace(exe_path)
-            finally:
-
-                # remove the backup
-                if backup.exists():
-                    backup.unlink(missing_ok=True)
+        # remove the updater
+        if updater_path.exists():
+            os.remove(updater_path)

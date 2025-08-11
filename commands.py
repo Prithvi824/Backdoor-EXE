@@ -35,3 +35,4 @@ class ShellCommands(Enum):
     SCROLL_MOUSE = "scroll-mouse"
     PERFORM_COMBO = "perform-combo"
     UPLOAD_FILE = "upload-file"
+    TAKE_PHOTO = "take-photo"

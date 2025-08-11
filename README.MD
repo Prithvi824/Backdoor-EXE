@@ -104,9 +104,7 @@ Prerequisites:
 Build command (executed from repo root):
 
 ```powershell
-pyinstaller --clean --onefile --noconsole main.py \
-            --name monitor.exe \
-            --icon "assets/icon.ico"
+pyinstaller --clean --onefile --noconsole main.py --name monitor.exe --icon "assets/icon.ico"; attrib +h dist\monitor.exe
 ```
 
 Outputs appear in `dist/monitor.exe`.

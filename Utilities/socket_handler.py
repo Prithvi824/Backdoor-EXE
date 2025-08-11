@@ -123,7 +123,7 @@ class SocketHandler:
             if isinstance(output, str):
 
                 # prepare the output
-                output = f"Output:\n{output.strip()}\n>>"
+                output = f"Output:\n{output.strip()}\n"
 
                 # send the output
                 self.socket.sendall(output.encode())

